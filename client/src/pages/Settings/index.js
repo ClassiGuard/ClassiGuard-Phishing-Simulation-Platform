@@ -1448,7 +1448,7 @@ const Settings = () => {
                           auditLogs.map((log) => (
                             <TableRow key={log._id} hover sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                               <TableCell sx={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                {new Date(log.createdAt).toLocaleString()}
+                                {new Date(log.timestamp).toLocaleString()}
                               </TableCell>
                               <TableCell sx={{ fontWeight: 600, color: '#f8fafc' }}>{log.action}</TableCell>
                               <TableCell sx={{ color: '#60a5fa' }}>{log.actor?.username || log.actor?.email || 'System'}</TableCell>

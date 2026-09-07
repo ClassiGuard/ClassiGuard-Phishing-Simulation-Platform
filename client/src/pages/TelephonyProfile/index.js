@@ -17,7 +17,7 @@ const TelephonyProfile = () => {
   const fetchProfiles = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/telephony-profile');
+      const res = await api.get('/api/telephony-profile');
       setProfiles(res.data.data);
       setError(null);
     } catch (err) {
@@ -35,7 +35,7 @@ const TelephonyProfile = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this telephony profile?")) {
       try {
-        await api.delete(`/telephony-profile/${id}`);
+        await api.delete(`/api/telephony-profile/${id}`);
         setProfiles(profiles.filter((p) => p._id !== id));
       } catch (err) {
         alert("Failed to delete profile");

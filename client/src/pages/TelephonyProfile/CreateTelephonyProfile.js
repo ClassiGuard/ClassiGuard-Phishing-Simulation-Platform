@@ -56,7 +56,7 @@ const CreateTelephonyProfile = () => {
         credentials: { ...credentials }
       };
 
-      await api.post('/telephony-profile', payload);
+      await api.post('/api/telephony-profile', payload);
       navigate('/console/telephony-profile');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create profile');
