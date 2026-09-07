@@ -151,7 +151,7 @@ export async function getSystemStats(req, res) {
       CampaignTracking.countDocuments({ status: 'sent' }),
       CampaignTracking.countDocuments({ status: 'clicked' }),
       CampaignTracking.countDocuments({ status: 'reported' }),
-      AuditEvent.find().sort({ createdAt: -1 }).limit(10).populate('actor', 'username firstName lastName email'),
+      AuditEvent.find().sort({ timestamp: -1 }).limit(100).populate('actor', 'username firstName lastName email'),
     ]);
 
     const clickRate = totalSent > 0 ? ((totalClicks / totalSent) * 100).toFixed(1) : '0.0';
