@@ -5,7 +5,6 @@ import {
 import { Add as AddIcon, Phone as PhoneIcon, DeleteOutline as DeleteOutlineIcon, Star as StarIcon, VpnKey as VpnKeyIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
-import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import api from '../../services/api';
 
@@ -57,7 +56,6 @@ const TelephonyProfile = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#0b0f19' }}>
       <Sidebar />
       <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Header />
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
             <Box>
