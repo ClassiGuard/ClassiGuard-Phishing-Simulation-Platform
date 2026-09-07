@@ -6,7 +6,7 @@ import { Add as AddIcon, Phone as PhoneIcon, DeleteOutline as DeleteOutlineIcon,
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import Footer from '../../components/Footer';
-import api from '../../services/api';
+import { axiosInstance as api } from '../../services/axiosInstance';
 
 const TelephonyProfile = () => {
   const [profiles, setProfiles] = useState([]);
