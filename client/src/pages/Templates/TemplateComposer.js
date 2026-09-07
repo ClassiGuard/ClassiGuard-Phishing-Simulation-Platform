@@ -101,10 +101,18 @@ const TemplateComposer = () => {
   const { createTemplate, updateTemplate, getTemplateById, loading, error } = useTemplates();
 
   const [name, setName] = useState('');
+  const [channel, setChannel] = useState('email');
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('IT & Security');
   const [difficulty, setDifficulty] = useState(3);
   const [htmlContent, setHtmlContent] = useState(DEFAULT_HTML_TEMPLATE);
+  
+  // Voice Settings
+  const [voiceType, setVoiceType] = useState('alice');
+  const [ttsMessage, setTtsMessage] = useState('Hello {{firstName}}, this is an urgent security notice.');
+  const [audioUrl, setAudioUrl] = useState('');
+  const [gatherPrompt, setGatherPrompt] = useState('');
+  
   const [previewDevice, setPreviewDevice] = useState('desktop');
   const [fetchLoading, setFetchLoading] = useState(false);
 
@@ -115,16 +123,24 @@ const TemplateComposer = () => {
         if (res && res.data) {
           const t = res.data;
           setName(t.name || '');
+          setChannel(t.channel || 'email');
           setSubject(t.subject || '');
           setCategory(t.category || 'IT & Security');
           setDifficulty(t.difficulty || 3);
           setHtmlContent(t.htmlContent || '');
+          if (t.voiceSettings) {
+            setVoiceType(t.voiceSettings.voiceType || 'alice');
+            setTtsMessage(t.voiceSettings.ttsMessage || '');
+            setAudioUrl(t.voiceSettings.audioUrl || '');
+            setGatherPrompt(t.voiceSettings.gatherPrompt || '');
+          }
         }
         setFetchLoading(false);
       });
     } else if (location.state && location.state.template) {
       const t = location.state.template;
       if (t.name) setName(t.name);
+      if (t.channel) setChannel(t.channel);
       if (t.subject) setSubject(t.subject);
       if (t.category) setCategory(t.category);
       if (t.difficulty) setDifficulty(Number(t.difficulty) || 3);
@@ -145,12 +161,23 @@ const TemplateComposer = () => {
     e.preventDefault();
     const payload = {
       name: name.trim(),
-      subject: subject.trim(),
+      channel,
       category,
       difficulty,
-      htmlContent,
       type: 'custom',
     };
+
+    if (channel === 'email') {
+        payload.subject = subject.trim();
+        payload.htmlContent = htmlContent;
+    } else {
+        payload.voiceSettings = {
+            voiceType,
+            ttsMessage: ttsMessage.trim(),
+            audioUrl: audioUrl.trim(),
+            gatherPrompt: gatherPrompt.trim(),
+        };
+    }
 
     if (isEditing) {
       const res = await updateTemplate(id, payload);
@@ -226,6 +253,23 @@ const TemplateComposer = () => {
               <Card sx={{ bgcolor: '#111827', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px', mb: 3 }}>
                 <CardContent sx={{ p: 3 }}>
                   
+                  <Box sx={{ mb: 3 }}>
+                      <ToggleButtonGroup
+                        value={channel}
+                        exclusive
+                        onChange={(e, val) => val && setChannel(val)}
+                        fullWidth
+                        size="small"
+                        sx={{
+                          '& .MuiToggleButton-root': { color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)' },
+                          '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.2) !important', color: '#60a5fa !important', fontWeight: 700 }
+                        }}
+                      >
+                        <ToggleButton value="email">Email Phishing</ToggleButton>
+                        <ToggleButton value="voice">Voice Vishing</ToggleButton>
+                      </ToggleButtonGroup>
+                    </Box>
+
                   {/* Metadata Row */}
                   <Grid container spacing={2} sx={{ mb: 2.5 }}>
                     <Grid item xs={12} sm={8}>
@@ -257,17 +301,39 @@ const TemplateComposer = () => {
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={8}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Email Subject Line"
-                        placeholder="Urgent: Your account requires immediate verification"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                        required
-                      />
-                    </Grid>
+                    {channel === 'email' && (
+                        <Grid item xs={12} sm={8}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="Email Subject Line"
+                            placeholder="Urgent: Your account requires immediate verification"
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            required
+                          />
+                        </Grid>
+                      )}
+                      
+                      {channel === 'voice' && (
+                        <Grid item xs={12} sm={8}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel sx={{ color: '#94a3b8' }}>Voice Engine</InputLabel>
+                            <Select
+                              value={voiceType}
+                              label="Voice Engine"
+                              onChange={(e) => setVoiceType(e.target.value)}
+                              sx={{ bgcolor: '#0b0f19' }}
+                            >
+                              <MenuItem value="alice">Alice (Natural Female)</MenuItem>
+                              <MenuItem value="man">Standard Male</MenuItem>
+                              <MenuItem value="woman">Standard Female</MenuItem>
+                              <MenuItem value="amazon">Amazon Polly (Advanced)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      )}
+
                     <Grid item xs={12} sm={4}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', bgcolor: '#0b0f19', p: 1, borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600, mb: 0.2 }}>

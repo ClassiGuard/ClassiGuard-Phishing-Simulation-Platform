@@ -33,9 +33,16 @@ const campaignTrackingSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'sent', 'opened', 'clicked', 'reported', 'failed', 'deferred', 'bounced', 'complained', 'disabled'],
+        enum: [
+            'pending', 'sent', 'opened', 'clicked', 'reported', 'failed', 'deferred', 'bounced', 'complained', 'disabled',
+            'call_initiated', 'call_ringing', 'call_answered', 'call_failed', 'key_pressed', 'call_completed'
+        ],
         default: 'pending',
         index: true,
+    },
+    dtmfDigits: {
+        type: String,
+        default: null,
     },
     openedAt: {
         type: Date,

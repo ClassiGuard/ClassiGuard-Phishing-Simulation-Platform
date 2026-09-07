@@ -18,6 +18,8 @@ import {
   InputLabel,
   Select,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -35,11 +37,13 @@ const StartCampaign = () => {
 
   // Form State
   const [campaignName, setCampaignName] = useState('');
+  const [channel, setChannel] = useState('email');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedAudience, setSelectedAudience] = useState('');
   const [targetFilterType, setTargetFilterType] = useState('all'); // 'all', 'department', 'ou', 'group'
   const [targetFilterValue, setTargetFilterValue] = useState('');
   const [selectedSenderProfile, setSelectedSenderProfile] = useState('');
+  const [selectedTelephonyProfile, setSelectedTelephonyProfile] = useState('');
   const [emailConcurrency, setEmailConcurrency] = useState('5');
   const [timeDelay, setTimeDelay] = useState('1');
 
@@ -48,13 +52,13 @@ const StartCampaign = () => {
   const [isLaunching, setIsLaunching] = useState(false);
   const [launchSuccess, setLaunchSuccess] = useState(false);
 
-  const { audiences, senderProfiles, templates } = useResources();
+  const { audiences, senderProfiles, telephonyProfiles, templates } = useResources();
   const { prepareCampaign, error: prepareError } = usePrepareCampaign();
   const { startCampaign, error: startError } = useStartCampaign();
 
   const currentAudienceObj = audiences?.find((a) => a._id === selectedAudience);
   const currentTemplateObj = templates?.find((t) => t._id === selectedTemplate);
-  const currentProfileObj = senderProfiles?.find((p) => p._id === selectedSenderProfile);
+  const currentProfileObj = channel === 'email' ? senderProfiles?.find((p) => p._id === selectedSenderProfile) : telephonyProfiles?.find((p) => p._id === selectedTelephonyProfile);
 
   // Extract unique departments, OUs, and groups from the selected audience
   const departmentsInAudience = [...new Set(currentAudienceObj?.contacts?.map((c) => c.department).filter(Boolean))];
@@ -73,15 +77,18 @@ const StartCampaign = () => {
     setIsPreparing(true);
     const campaignData = {
       name: campaignName.trim(),
+      channel,
       audience: selectedAudience,
-      senderProfile: selectedSenderProfile,
+      senderProfile: channel === 'email' ? selectedSenderProfile : undefined,
+      telephonyProfile: channel === 'voice' ? selectedTelephonyProfile : undefined,
       template: selectedTemplate,
       emailConcurrency: Number(emailConcurrency) || 5,
       timeDelay: Number(timeDelay) || 1,
-      targetFilter: {
-        type: targetFilterType,
-        value: targetFilterValue,
+      targetScope: {
+        type: targetFilterType === 'all' ? 'audience' : targetFilterType,
+        description: targetFilterValue || 'Full Audience',
       },
+      purpose: "Authorized Simulation", // Default mock purpose for the wizard
     };
 
     const response = await prepareCampaign(campaignData);
@@ -179,15 +186,37 @@ const StartCampaign = () => {
                   </Grid>
 
                   <Grid item xs={12}>
+                    <ToggleButtonGroup
+                      value={channel}
+                      exclusive
+                      onChange={(e, val) => {
+                        if (val) {
+                          setChannel(val);
+                          setSelectedTemplate(''); // reset template since channel changed
+                        }
+                      }}
+                      fullWidth
+                      size="small"
+                      sx={{
+                        '& .MuiToggleButton-root': { color: '#94a3b8', borderColor: 'rgba(255,255,255,0.1)' },
+                        '& .Mui-selected': { bgcolor: 'rgba(59, 130, 246, 0.2) !important', color: '#60a5fa !important', fontWeight: 700 }
+                      }}
+                    >
+                      <ToggleButton value="email">Email Phishing</ToggleButton>
+                      <ToggleButton value="voice">Voice Vishing</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Grid>
+
+                  <Grid item xs={12}>
                     <FormControl fullWidth>
-                      <InputLabel sx={{ color: '#94a3b8' }}>Select Phishing Scenario Template</InputLabel>
+                      <InputLabel sx={{ color: '#94a3b8' }}>Select {channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template</InputLabel>
                       <Select
                         value={selectedTemplate}
-                        label="Select Phishing Scenario Template"
+                        label={`Select ${channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template`}
                         onChange={(e) => setSelectedTemplate(e.target.value)}
                         sx={{ bgcolor: '#0b0f19' }}
                       >
-                        {templates?.map((t) => (
+                        {templates?.filter(t => (t.channel || 'email') === channel).map((t) => (
                           <MenuItem key={t._id} value={t._id}>
                             {t.name} — ({t.category || 'General'} | Difficulty: {t.difficulty || 3}/5)
                           </MenuItem>
@@ -371,23 +400,43 @@ const StartCampaign = () => {
                 </Typography>
 
                 <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel sx={{ color: '#94a3b8' }}>Select SMTP Relay Profile</InputLabel>
-                      <Select
-                        value={selectedSenderProfile}
-                        label="Select SMTP Relay Profile"
-                        onChange={(e) => setSelectedSenderProfile(e.target.value)}
-                        sx={{ bgcolor: '#0b0f19' }}
-                      >
-                        {senderProfiles?.map((p) => (
-                          <MenuItem key={p._id} value={p._id}>
-                            {p.senderName} ({p.host}:{p.port} {p.isDefault ? '— Default' : ''})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
+                  {channel === 'email' ? (
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel sx={{ color: '#94a3b8' }}>Select SMTP Relay Profile</InputLabel>
+                          <Select
+                            value={selectedSenderProfile}
+                            label="Select SMTP Relay Profile"
+                            onChange={(e) => setSelectedSenderProfile(e.target.value)}
+                            sx={{ bgcolor: '#0b0f19' }}
+                          >
+                            {senderProfiles?.map((p) => (
+                              <MenuItem key={p._id} value={p._id}>
+                                {p.senderName} ({p.host}:{p.port} {p.isDefault ? '— Default' : ''})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    ) : (
+                      <Grid item xs={12}>
+                        <FormControl fullWidth>
+                          <InputLabel sx={{ color: '#94a3b8' }}>Select Telephony Voice API Profile</InputLabel>
+                          <Select
+                            value={selectedTelephonyProfile}
+                            label="Select Telephony Voice API Profile"
+                            onChange={(e) => setSelectedTelephonyProfile(e.target.value)}
+                            sx={{ bgcolor: '#0b0f19' }}
+                          >
+                            {telephonyProfiles?.map((p) => (
+                              <MenuItem key={p._id} value={p._id}>
+                                {p.name} ({p.provider} - {p.callerId})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    )}
 
                   <Grid item xs={12} sm={6}>
                     <TextField

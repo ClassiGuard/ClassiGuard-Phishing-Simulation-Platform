@@ -84,18 +84,28 @@ export const getCampaignById = async (req, res) => {
 // Prepare a new campaign
 export const prepareCampaign = async (req, res) => {
     try {
-        const { name, audience, senderProfile, template, emailConcurrency, timeDelay, purpose, targetScope, allowedDomains = [], blockedDomains = [], exclusionGroups = [], scheduledStart, scheduledEnd } = req.body;
+        const { name, audience, channel = 'email', senderProfile, telephonyProfile, template, emailConcurrency, timeDelay, purpose, targetScope, allowedDomains = [], blockedDomains = [], exclusionGroups = [], scheduledStart, scheduledEnd } = req.body;
         if (!purpose || !targetScope?.type) return res.status(400).json({ success: false, message: 'A written purpose and target scope are required.' });
         if (scheduledStart && scheduledEnd && new Date(scheduledStart) >= new Date(scheduledEnd)) return res.status(400).json({ success: false, message: 'The campaign end time must be after the start time.' });
 
-        // Verify SMTP by sender profile ID
-        await verifySMTPById(req.body.senderProfile);
+        if (channel === 'email') {
+            if (!senderProfile) return res.status(400).json({ success: false, message: 'Sender profile is required for email campaigns.' });
+            // Verify SMTP by sender profile ID
+            await verifySMTPById(senderProfile);
+        } else if (channel === 'voice') {
+            if (!telephonyProfile) return res.status(400).json({ success: false, message: 'Telephony profile is required for voice campaigns.' });
+            // Add telephony verification here if needed in the future
+        } else {
+            return res.status(400).json({ success: false, message: 'Invalid channel specified.' });
+        }
 
         // Prepare the campaign object
         const campaignData = {
             name,
             audience,
-            senderProfile,
+            channel,
+            senderProfile: channel === 'email' ? senderProfile : undefined,
+            telephonyProfile: channel === 'voice' ? telephonyProfile : undefined,
             emailConcurrency,
             timeDelay,
             purpose,
@@ -208,8 +218,11 @@ export const startCampaign = async (req, res) => {
         if (campaign.scheduledStart && new Date() < campaign.scheduledStart) return res.status(400).json({ success: false, message: 'Campaign is outside its scheduled send window.' });
         if (campaign.scheduledEnd && new Date() > campaign.scheduledEnd) return res.status(400).json({ success: false, message: 'Campaign send window has ended.' });
 
-        // Verify SMTP by sender profile ID before updating campaign status
-        await verifySMTPById(campaign.senderProfile._id);
+        if (campaign.channel === 'email') {
+            if (!campaign.senderProfile) return res.status(400).json({ success: false, message: 'Sender profile missing.' });
+            // Verify SMTP by sender profile ID before updating campaign status
+            await verifySMTPById(campaign.senderProfile._id);
+        }
 
         // Update campaign status to 'ongoing' after successful SMTP verification
         await Campaign.findByIdAndUpdate(id, { status: 'ongoing' }, { new: true, runValidators: true });

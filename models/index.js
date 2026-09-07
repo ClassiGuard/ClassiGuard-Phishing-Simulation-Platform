@@ -2,6 +2,7 @@ import Audience from './Audience.js';
 import Contact from './Contact.js';
 import Template from './Template.js';
 import SenderProfile from './SenderProfile.js';
+import TelephonyProfile from './TelephonyProfile.js';
 import Campaign from './Campaign.js';
 import EmailClick from './EmailClick.js';
 import Credential from './Credential.js';
@@ -11,6 +12,7 @@ export {
     Contact,
     Template,
     SenderProfile,
+    TelephonyProfile,
     Campaign,
     EmailClick,
     Credential

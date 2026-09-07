@@ -16,6 +16,9 @@ import AudienceDetail from './pages/Audience/AudienceDetail';
 import SenderProfile from './pages/SenderProfile';
 import CreateSenderProfile from './pages/SenderProfile/CreateSenderProfile';
 
+import TelephonyProfile from './pages/TelephonyProfile';
+import CreateTelephonyProfile from './pages/TelephonyProfile/CreateTelephonyProfile';
+
 import Templates from './pages/Templates';
 import TemplateComposer from './pages/Templates/TemplateComposer';
 
@@ -184,6 +187,9 @@ function AppContent() {
 
         <Route path="/console/sender-profile" element={<ProtectedRoute><SenderProfile /></ProtectedRoute>} />
         <Route path="/console/sender-profile/create" element={<ProtectedRoute><CreateSenderProfile /></ProtectedRoute>} />
+
+        <Route path="/console/telephony-profile" element={<ProtectedRoute><TelephonyProfile /></ProtectedRoute>} />
+        <Route path="/console/telephony-profile/create" element={<ProtectedRoute><CreateTelephonyProfile /></ProtectedRoute>} />
 
         <Route path="/console/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
         <Route path="/console/templates/new" element={<ProtectedRoute><TemplateComposer /></ProtectedRoute>} />

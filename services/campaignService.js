@@ -4,6 +4,7 @@ import Campaign from '../models/Campaign.js';
 import CampaignTracking from '../models/CampaignTracking.js';
 
 import { sendMultipleEmails } from './emailService.js';
+import { makeOutboundCall } from './telephonyService.js';
 import pLimit from 'p-limit';
 
 /**
@@ -12,22 +13,45 @@ import pLimit from 'p-limit';
 export const runCampaignService = async (id, origin) => {
     try {
         const campaignId = new mongoose.Types.ObjectId(String(id));
-        const campaign = await Campaign.findById(id).populate('senderProfile template');
+        const campaign = await Campaign.findById(id).populate('senderProfile template telephonyProfile');
         if (!campaign) {
             console.error('Campaign not found');
             return;
         }
 
-        const { senderProfile, template, emailConcurrency, timeDelay } = campaign;
+        const { senderProfile, telephonyProfile, template, emailConcurrency, timeDelay, channel } = campaign;
         const limit = pLimit(emailConcurrency || 1);
         const trackingEntries = await CampaignTracking.find({ campaign: campaignId, status: 'pending' }).populate('contact');
 
-        // Wait for all emails to be sent
-        await Promise.all(trackingEntries.map(entry =>
-            limit(async () => {
-                await sendMultipleEmails(entry, senderProfile, template, timeDelay, origin);
-            })
-        ));
+        if (channel === 'voice') {
+            await Promise.all(trackingEntries.map(entry =>
+                limit(async () => {
+                    const phoneNumber = entry.contact.phoneNumber;
+                    if (!phoneNumber) {
+                        await CampaignTracking.findByIdAndUpdate(entry._id, { status: 'failed', errorDetail: 'No phone number' });
+                        return;
+                    }
+                    if (timeDelay > 0) {
+                        await new Promise(resolve => setTimeout(resolve, timeDelay * 1000));
+                    }
+                    try {
+                        const answerUrl = `${origin}/api/webhooks/voice/${telephonyProfile.provider}/answer`;
+                        const statusUrl = `${origin}/api/webhooks/voice/${telephonyProfile.provider}/status`;
+                        await makeOutboundCall(telephonyProfile, phoneNumber, answerUrl, statusUrl, entry._id);
+                    } catch (err) {
+                        console.error('Failed to dispatch call:', err);
+                        await CampaignTracking.findByIdAndUpdate(entry._id, { status: 'failed' });
+                    }
+                })
+            ));
+        } else {
+            // Wait for all emails to be sent
+            await Promise.all(trackingEntries.map(entry =>
+                limit(async () => {
+                    await sendMultipleEmails(entry, senderProfile, template, timeDelay, origin);
+                })
+            ));
+        }
 
         // Update campaign status to 'completed' after all emails are sent
         await Campaign.findByIdAndUpdate(id, { status: 'completed' }, { new: true });

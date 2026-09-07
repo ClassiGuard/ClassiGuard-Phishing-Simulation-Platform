@@ -12,10 +12,20 @@ const campaignSchema = new Schema({
         ref: 'Audience',
         required: true
     },
+    channel: {
+        type: String,
+        enum: ['email', 'voice'],
+        default: 'email',
+    },
     senderProfile: {
         type: Schema.Types.ObjectId,
         ref: 'SenderProfile',
-        required: true
+        required: function() { return this.channel === 'email'; }
+    },
+    telephonyProfile: {
+        type: Schema.Types.ObjectId,
+        ref: 'TelephonyProfile',
+        required: function() { return this.channel === 'voice'; }
     },
     template: {
         type: Schema.Types.ObjectId,

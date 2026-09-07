@@ -23,6 +23,7 @@ import {
   Outbox as OutboxIcon,
   Email as EmailIcon,
   Campaign as CampaignIcon,
+  Phone as PhoneIcon,
   Menu as MenuIcon,
   Assessment as AssessmentIcon,
   Settings as SettingsIcon,
@@ -106,6 +107,7 @@ const Sidebar = () => {
       items: [
         { text: 'Audience Lists', icon: <GroupIcon />, path: '/console/audience' },
         { text: 'SMTP Profiles', icon: <OutboxIcon />, path: '/console/sender-profile' },
+        { text: 'Telephony Profiles', icon: <PhoneIcon />, path: '/console/telephony-profile' },
         { text: 'Email Templates', icon: <EmailIcon />, path: '/console/templates' },
         { text: 'Campaign Drills', icon: <CampaignIcon />, path: '/console/campaign' },
       ],

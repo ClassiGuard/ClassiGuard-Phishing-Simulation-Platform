@@ -1,22 +1,22 @@
-import SenderProfile from '../models/SenderProfile.js';  // Assuming you have a model for sender profiles
-import Audience from '../models/Audience.js';            // Assuming you have a model for audiences
-import Template from '../models/Template.js';            // Assuming you have a model for email templates
+import SenderProfile from '../models/SenderProfile.js';
+import TelephonyProfile from '../models/TelephonyProfile.js';
+import Audience from '../models/Audience.js';
+import Template from '../models/Template.js';
 
-// Controller function to fetch and return multiple resources with specific fields
 export const getResourceOverview = async (req, res) => {
     try {
-        // Fetch sender profiles, audiences, and templates with selected fields concurrently
-        const [senderProfiles, audiences, templates] = await Promise.all([
-            SenderProfile.find().sort({ createdAt: -1 }).select('_id senderName email'), // Fetch only _id, senderName, and email
-            Audience.find().sort({ createdAt: -1 }).select('_id name'), // Fetch only _id and name
-            Template.find().sort({ createdAt: -1 }).select('_id name subject'), // Fetch only _id, name, and subject
+        const [senderProfiles, telephonyProfiles, audiences, templates] = await Promise.all([
+            SenderProfile.find().sort({ createdAt: -1 }).select('_id senderName email'),
+            TelephonyProfile.find().sort({ createdAt: -1 }).select('_id name provider callerId'),
+            Audience.find().sort({ createdAt: -1 }).select('_id name contacts'),
+            Template.find().sort({ createdAt: -1 }).select('_id name subject channel'),
         ]);
 
-        // Return the fetched data as a response
         res.status(200).json({
             success: true,
             data: {
                 senderProfiles,
+                telephonyProfiles,
                 audiences,
                 templates,
             },

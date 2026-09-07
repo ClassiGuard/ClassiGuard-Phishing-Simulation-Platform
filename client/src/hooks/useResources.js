@@ -2,26 +2,26 @@ import { useState, useEffect } from 'react';
 import { axiosInstance } from '../services/axiosInstance'; // Your configured axios instance
 
 export const useResources = () => {
-    const [senderProfiles, setSenderProfiles] = useState([]); // To store sender profiles
-    const [audiences, setAudiences] = useState([]);           // To store audiences
-    const [templates, setTemplates] = useState([]);           // To store templates
+    const [senderProfiles, setSenderProfiles] = useState([]);
+    const [telephonyProfiles, setTelephonyProfiles] = useState([]);
+    const [audiences, setAudiences] = useState([]);
+    const [templates, setTemplates] = useState([]);
 
-    const [loading, setLoading] = useState(false);            // Loading state
-    const [error, setError] = useState(null);                 // Error state
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    // Function to fetch resources from the API
     const fetchResources = async () => {
-        setLoading(true); // Start loading
-        setError(null);   // Clear any previous errors
+        setLoading(true);
+        setError(null);
         try {
-            const response = await axiosInstance.get('/api/resource/overview'); // Call the API
+            const response = await axiosInstance.get('/api/resource/overview');
 
-            // If the API call was successful
             if (response.data.success) {
-                const { senderProfiles, audiences, templates } = response.data.data;
-                setSenderProfiles(senderProfiles);  // Update sender profiles
-                setAudiences(audiences);            // Update audiences
-                setTemplates(templates);            // Update templates
+                const { senderProfiles, telephonyProfiles, audiences, templates } = response.data.data;
+                setSenderProfiles(senderProfiles);
+                setTelephonyProfiles(telephonyProfiles);
+                setAudiences(audiences);
+                setTemplates(templates);
             } else {
                 setError('Failed to fetch resources'); // Handle API failure
             }
@@ -40,6 +40,7 @@ export const useResources = () => {
     // Return the resources, loading state, error, and the fetch function for manual re-fetch
     return {
         senderProfiles,
+        telephonyProfiles,
         audiences,
         templates,
         loading,

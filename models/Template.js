@@ -9,7 +9,7 @@ const templateSchema = new Schema({
     },
     subject: {
         type: String,
-        required: true,
+        required: function() { return this.channel === 'email'; },
         trim: true
     },
     type: {
@@ -35,7 +35,7 @@ const templateSchema = new Schema({
     },
     htmlContent: {
         type: String,
-        required: true,
+        required: function() { return this.channel === 'email'; },
     },
     sourceFormat: {
         type: String,
@@ -50,6 +50,17 @@ const templateSchema = new Schema({
         type: Schema.Types.Mixed,
         default: null,
     },
+    channel: {
+        type: String,
+        enum: ['email', 'voice'],
+        default: 'email',
+    },
+    voiceSettings: {
+        voiceType: { type: String, default: 'alice' }, // twilio voice type (man, woman, alice, amazon, etc)
+        ttsMessage: { type: String, default: '' },
+        gatherPrompt: { type: String, default: '' },
+        audioUrl: { type: String, default: '' }
+    }
 }, { timestamps: true });
 
 const Template = mongoose.model('Template', templateSchema);
