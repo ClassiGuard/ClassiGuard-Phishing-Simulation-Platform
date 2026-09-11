@@ -5,7 +5,8 @@ import Submission from '../models/Submission.js';
 import EmailClick from '../models/EmailClick.js';
 import CampaignTracking from '../models/CampaignTracking.js';
 import Audience from '../models/Audience.js';
-import { runCampaignService, resendFailedEmailsService } from '../services/campaignService.js';
+import { enqueueCampaign, enqueueResend } from '../services/queueService.js';
+import { sendTeamsCampaignAlert } from '../services/teamsService.js';
 import { verifySMTPById } from '../services/smtpService.js';
 import generateShortId from '../utils/generateShortId.js';
 import { audit } from '../services/auditService.js';
@@ -225,8 +226,9 @@ export const startCampaign = async (req, res) => {
         }
 
         // Update campaign status to 'ongoing' after successful SMTP verification
-        await Campaign.findByIdAndUpdate(id, { status: 'ongoing' }, { new: true, runValidators: true });
+        const updatedCampaign = await Campaign.findByIdAndUpdate(id, { status: 'ongoing' }, { new: true, runValidators: true });
         await audit({ req, action: 'campaign.started', resourceType: 'campaign', resourceId: id });
+        await sendTeamsCampaignAlert(updatedCampaign, 'started');
 
         res.status(200).json({
             success: true,
@@ -239,8 +241,8 @@ export const startCampaign = async (req, res) => {
         const host = req.get('host');
         const origin = `${protocol}://${host}`;
 
-        // Run email sending in the background
-        runCampaignService(id, origin);
+        // Run email sending in the background via BullMQ
+        enqueueCampaign(id, origin);
 
     } catch (error) {
         res.status(500).json({
@@ -367,8 +369,8 @@ export const resendFailedEmails = async (req, res) => {
             message: 'Resend for failed emails initiated'
         });
 
-        // Run the resend service in the background
-        resendFailedEmailsService(id);
+        // Run the resend service in the background via BullMQ
+        enqueueResend(id);
 
     } catch (error) {
         console.log("Error >>>", error);

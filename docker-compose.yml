@@ -19,6 +19,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mongodb
+      - redis
     env_file: .env
     environment:
       NODE_ENV: production
@@ -28,7 +29,35 @@ services:
       MONGO_DATABASE: cyphish
       MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-cyphish_app}
       MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       TRUST_PROXY: "true"
+
+  worker:
+    build: .
+    image: cyphish:latest
+    restart: unless-stopped
+    command: ["node", "worker.js"]
+    depends_on:
+      - mongodb
+      - redis
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_DATABASE: cyphish
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-cyphish_app}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - cyphish_redis_data:/data
 
   nginx:
     image: nginx:alpine
@@ -44,3 +73,4 @@ services:
 
 volumes:
   cyphish_mongo_data:
+  cyphish_redis_data:

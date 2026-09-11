@@ -132,6 +132,14 @@ const Settings = () => {
     subject: 'CyPhish Scheduled Awareness Report',
   });
 
+  const [msTeams, setMsTeams] = useState({
+    enabled: false,
+    webhookUrl: '',
+    notifyOnCampaignStart: true,
+    notifyOnCampaignFinish: true,
+    notifyOnPhishingReported: true,
+  });
+
   const [security, setSecurity] = useState({
     sessionInactivityTimeoutMinutes: 15,
     maxFailedLoginAttempts: 5,
@@ -254,6 +262,15 @@ const Settings = () => {
             subject: d.scheduledReports.subject || 'CyPhish Scheduled Awareness Report',
           });
         }
+        if (d.msTeams) {
+          setMsTeams({
+            enabled: d.msTeams.enabled ?? false,
+            webhookUrl: d.msTeams.webhookUrl || '',
+            notifyOnCampaignStart: d.msTeams.notifyOnCampaignStart ?? true,
+            notifyOnCampaignFinish: d.msTeams.notifyOnCampaignFinish ?? true,
+            notifyOnPhishingReported: d.msTeams.notifyOnPhishingReported ?? true,
+          });
+        }
         if (d.security) {
           setSecurity({
             sessionInactivityTimeoutMinutes: d.security.sessionInactivityTimeoutMinutes || 15,
@@ -310,6 +327,7 @@ const Settings = () => {
             .map((r) => r.trim())
             .filter(Boolean),
         },
+        msTeams,
       };
 
       const res = await updateSystemSettings(payload);
@@ -581,6 +599,7 @@ const Settings = () => {
                 <Tab label="⚙️ General & 180d Retention" />
                 <Tab label="🗂️ Active Directory / LDAP" />
                 <Tab label="📊 Automated Reports" />
+                <Tab label="🔔 MS Teams Webhook" />
                 <Tab label="📜 Audit Trail" />
               </Tabs>
             </Box>
@@ -1416,8 +1435,63 @@ const Settings = () => {
                 </Box>
               )}
 
-              {/* Tab 6: Audit Trail */}
+              {/* Tab 6: MS Teams Webhook */}
               {tabIndex === 6 && (
+                <Box>
+                  <Typography variant="h6" sx={{ color: '#f8fafc', fontWeight: 700, mb: 1 }}>
+                    MS Teams Integrations & Alerts
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', mb: 3 }}>
+                    Configure a Microsoft Teams Incoming Webhook to receive instant notifications when campaigns start/finish, or when users successfully report a phishing simulation.
+                  </Typography>
+
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={<Switch checked={msTeams.enabled} onChange={(e) => setMsTeams({ ...msTeams, enabled: e.target.checked })} color="primary" />}
+                        label={<Typography variant="body1" sx={{ color: '#f8fafc', fontWeight: 600 }}>Enable MS Teams Webhook Integration</Typography>}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="MS Teams Incoming Webhook URL"
+                        placeholder="https://yourdomain.webhook.office.com/webhookb2/..."
+                        value={msTeams.webhookUrl}
+                        onChange={(e) => setMsTeams({ ...msTeams, webhookUrl: e.target.value })}
+                        disabled={!msTeams.enabled}
+                        InputProps={{ style: { color: '#f8fafc' } }}
+                        sx={{ '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' } } }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <FormControlLabel
+                        control={<Switch checked={msTeams.notifyOnCampaignStart} onChange={(e) => setMsTeams({ ...msTeams, notifyOnCampaignStart: e.target.checked })} color="primary" disabled={!msTeams.enabled} />}
+                        label={<Typography variant="body2" sx={{ color: '#cbd5e1' }}>Alert on Campaign Start</Typography>}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <FormControlLabel
+                        control={<Switch checked={msTeams.notifyOnCampaignFinish} onChange={(e) => setMsTeams({ ...msTeams, notifyOnCampaignFinish: e.target.checked })} color="primary" disabled={!msTeams.enabled} />}
+                        label={<Typography variant="body2" sx={{ color: '#cbd5e1' }}>Alert on Campaign Finish</Typography>}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <FormControlLabel
+                        control={<Switch checked={msTeams.notifyOnPhishingReported} onChange={(e) => setMsTeams({ ...msTeams, notifyOnPhishingReported: e.target.checked })} color="primary" disabled={!msTeams.enabled} />}
+                        label={<Typography variant="body2" sx={{ color: '#cbd5e1' }}>Alert when user reports Phishing</Typography>}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
+              {/* Tab 7: Audit Trail */}
+              {tabIndex === 7 && (
                 <Box>
                   <Typography variant="h6" sx={{ color: '#f8fafc', fontWeight: 700, mb: 1 }}>
                     Security Audit Trail & Compliance Log

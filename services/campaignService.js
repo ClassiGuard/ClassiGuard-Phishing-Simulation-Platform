@@ -5,6 +5,7 @@ import CampaignTracking from '../models/CampaignTracking.js';
 
 import { sendMultipleEmails } from './emailService.js';
 import { makeOutboundCall } from './telephonyService.js';
+import { sendTeamsCampaignAlert } from './teamsService.js';
 import pLimit from 'p-limit';
 
 /**
@@ -54,8 +55,9 @@ export const runCampaignService = async (id, origin) => {
         }
 
         // Update campaign status to 'completed' after all emails are sent
-        await Campaign.findByIdAndUpdate(id, { status: 'completed' }, { new: true });
+        const completedCampaign = await Campaign.findByIdAndUpdate(id, { status: 'completed' }, { new: true });
         console.log(`Campaign ${id} completed successfully.`);
+        await sendTeamsCampaignAlert(completedCampaign, 'finished');
 
     } catch (error) {
         console.error('Error processing campaign emails:', error.message);

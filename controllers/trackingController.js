@@ -3,6 +3,7 @@ import EmailClick from '../models/EmailClick.js';
 import CampaignTracking from '../models/CampaignTracking.js';
 import { getClientIP } from '../utils/utils.js';
 import { audit } from '../services/auditService.js';
+import { sendTeamsPhishingReportedAlert } from '../services/teamsService.js';
 
 // 1x1 Transparent GIF buffer for email open tracking
 const TRANSPARENT_1X1_GIF = Buffer.from(
@@ -171,6 +172,10 @@ export const reportPhishing = async (req, res) => {
                 timeToReportMs: entry.reportedAt && entry.deliveredAt ? entry.reportedAt - entry.deliveredAt : null,
             },
         });
+
+        if (entry.contact && entry.campaign) {
+            await sendTeamsPhishingReportedAlert(entry.contact, entry.campaign);
+        }
 
         // If accessed directly via browser link, redirect to frontend celebration confirmation
         if (req.method === 'GET' && req.accepts('html')) {

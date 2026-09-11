@@ -159,6 +159,29 @@ const systemSettingSchema = new Schema({
       },
     },
   },
+  msTeams: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    webhookUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    notifyOnCampaignStart: {
+      type: Boolean,
+      default: true,
+    },
+    notifyOnCampaignFinish: {
+      type: Boolean,
+      default: true,
+    },
+    notifyOnPhishingReported: {
+      type: Boolean,
+      default: true,
+    },
+  },
   scheduledReports: {
     enabled: {
       type: Boolean,
