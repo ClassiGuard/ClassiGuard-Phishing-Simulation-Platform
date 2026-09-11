@@ -182,23 +182,27 @@ export async function discoverLiveModels({ provider, apiKey, baseUrl } = {}) {
           };
         });
 
-      // Priority sort: standard 2.0/1.5 flash models first
+      // Priority sort: put the latest 3.x models first, prioritizing higher versions and flash over pro
       discovered.sort((a, b) => {
-        if (a.id === 'gemini-2.0-flash') return -1;
-        if (b.id === 'gemini-2.0-flash') return 1;
-        if (a.id === 'gemini-1.5-flash') return -1;
-        if (b.id === 'gemini-1.5-flash') return 1;
+        // Sort descending based on semantic-like version string in the id (e.g. 3.8 > 3.7 > 3 > 2.5)
+        const versionA = parseFloat((a.id.match(/\d+(\.\d+)?/) || [0])[0]);
+        const versionB = parseFloat((b.id.match(/\d+(\.\d+)?/) || [0])[0]);
+        
+        if (versionA !== versionB) return versionB - versionA; // Higher version first
         if (a.id.includes('flash') && !b.id.includes('flash')) return -1;
         if (!a.id.includes('flash') && b.id.includes('flash')) return 1;
-        return a.id.localeCompare(b.id);
+        return b.id.localeCompare(a.id); // Descending alphabetical fallback
       });
+
+      // Pin only the top 4 latest models to keep the UI clean
+      const topModels = discovered.slice(0, 4);
 
       return {
         provider: 'gemini',
         live: true,
-        count: discovered.length,
-        defaultModelId: discovered.find((m) => m.id === 'gemini-3.8-flash')?.id || discovered[0]?.id || 'gemini-3.8-flash',
-        models: discovered,
+        count: topModels.length,
+        defaultModelId: topModels.find((m) => m.id.includes('3.8'))?.id || topModels[0]?.id,
+        models: topModels,
       };
     }
 
