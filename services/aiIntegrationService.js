@@ -197,7 +197,7 @@ export async function discoverLiveModels({ provider, apiKey, baseUrl } = {}) {
         provider: 'gemini',
         live: true,
         count: discovered.length,
-        defaultModelId: discovered.find((m) => m.id === 'gemini-2.0-flash')?.id || discovered[0]?.id || 'gemini-2.0-flash',
+        defaultModelId: discovered.find((m) => m.id === 'gemini-3.8-flash')?.id || discovered[0]?.id || 'gemini-3.8-flash',
         models: discovered,
       };
     }
@@ -339,14 +339,12 @@ export async function getModelsConfig() {
         updated: '2026-09-04',
         providers: {
           gemini: {
-            defaultModelId: 'gemini-2.0-flash',
+            defaultModelId: 'gemini-3.8-flash',
             models: [
-              { id: 'gemini-2.0-flash', name: '3.7 Flash / Gemini 2.0 Flash ⚡ [All-Around Help / Free Tier]', tier: 'free_tier' },
-              { id: 'gemini-2.0-flash-lite', name: '3.5 Flash-Lite / Gemini 2.0 Flash-Lite ⚡ [Fastest Answers / Free Tier]', tier: 'free_tier' },
-              { id: 'gemini-1.5-pro', name: '3.1 Pro / Gemini 1.5 Pro ⚡ [Advanced Reasoning / Free Tier]', tier: 'free_tier' },
-              { id: 'gemini-2.0-pro-exp-02-05', name: 'Extended Thinking / Gemini 2.0 Pro ⚡ [Complex Problem Solving]', tier: 'reasoning_free' },
-              { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash ⚡ [Highest Availability & Reliability / Free Tier]', tier: 'free_tier' },
-              { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B ⚡ [High Throughput / Free Tier]', tier: 'free_tier' },
+              { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash ⚡ [All-Around Help / Free Tier]', tier: 'free_tier' },
+              { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite ⚡ [Fastest Answers / Free Tier]', tier: 'free_tier' },
+              { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro Preview ⚡ [Advanced Reasoning]', tier: 'free_tier' },
+              { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview ⚡ [High Availability]', tier: 'free_tier' },
             ],
           },
           claude: {
@@ -539,18 +537,18 @@ You MUST respond with a single, strictly valid JSON object adhering to this sche
  * Smart candidate resolver for Gemini models
  */
 function resolveGeminiModelCandidates(inputModel) {
-  const raw = String(inputModel || 'gemini-2.0-flash').trim().replace(/^models\//, '');
+  const raw = String(inputModel || 'gemini-3.8-flash').trim().replace(/^models\//, '');
   const lower = raw.toLowerCase();
   const candidates = [];
 
-  if (lower.includes('3.7') || lower.includes('2.5') || lower.includes('all-around')) {
-    candidates.push(raw, 'gemini-2.0-flash', 'gemini-1.5-flash');
-  } else if (lower.includes('3.5') || lower.includes('flash-lite') || lower.includes('fastest')) {
-    candidates.push(raw, 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash');
-  } else if (lower.includes('3.1') || lower.includes('thinking') || lower.includes('reasoning') || lower.includes('exp')) {
-    candidates.push(raw, 'gemini-2.0-pro-exp-02-05', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash');
+  if (lower.includes('3.8') || lower.includes('3.7') || lower.includes('all-around')) {
+    candidates.push(raw, 'gemini-3.8-flash', 'gemini-3.5-flash-lite');
+  } else if (lower.includes('3.5') || lower.includes('lite') || lower.includes('fastest')) {
+    candidates.push(raw, 'gemini-3.5-flash-lite', 'gemini-3.8-flash');
+  } else if (lower.includes('pro') || lower.includes('thinking') || lower.includes('reasoning')) {
+    candidates.push(raw, 'gemini-3-pro-preview', 'gemini-3.8-flash');
   } else {
-    candidates.push(raw, 'gemini-2.0-flash', 'gemini-1.5-flash');
+    candidates.push(raw, 'gemini-3.8-flash', 'gemini-3.5-flash-lite');
   }
 
   return [...new Set(candidates.filter(Boolean))];
