@@ -478,7 +478,6 @@ const StartCampaign = () => {
                 </Typography>
 
                 <Grid container spacing={3}>
-                                  <Grid container spacing={3}>
                     {channel === 'email' ? (
                         <Grid item xs={12}>
                           <FormControl fullWidth>
