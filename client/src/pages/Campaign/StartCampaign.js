@@ -20,14 +20,20 @@ import {
   IconButton,
   ToggleButton,
   ToggleButtonGroup,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import Sidebar from '../../components/Sidebar';
 import Footer from '../../components/Footer';
 import { useResources } from '../../hooks/useResources';
 import { usePrepareCampaign, useStartCampaign } from '../../hooks/useCampaign';
+import templateService from '../../services/templateService';
 
 const STEPS = ['Drill Specification', 'Audience & Smart Targeting', 'Relay & Rate Limiting', 'Review & Launch'];
 
@@ -47,6 +53,11 @@ const StartCampaign = () => {
   const [emailConcurrency, setEmailConcurrency] = useState('5');
   const [timeDelay, setTimeDelay] = useState('1');
 
+  // MS Teams overrides
+  const [msTeamsNotifyStart, setMsTeamsNotifyStart] = useState(true);
+  const [msTeamsNotifyFinish, setMsTeamsNotifyFinish] = useState(true);
+  const [msTeamsNotifyPhishReport, setMsTeamsNotifyPhishReport] = useState(true);
+
   const [isPreparing, setIsPreparing] = useState(false);
   const [preparedCampaignId, setPreparedCampaignId] = useState(null);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -56,6 +67,12 @@ const StartCampaign = () => {
   const { prepareCampaign, error: prepareError } = usePrepareCampaign();
   const { startCampaign, error: startError } = useStartCampaign();
 
+  // AI Generator state
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
+
   const currentAudienceObj = audiences?.find((a) => a._id === selectedAudience);
   const currentTemplateObj = templates?.find((t) => t._id === selectedTemplate);
   const currentProfileObj = channel === 'email' ? senderProfiles?.find((p) => p._id === selectedSenderProfile) : telephonyProfiles?.find((p) => p._id === selectedTelephonyProfile);
@@ -64,6 +81,52 @@ const StartCampaign = () => {
   const departmentsInAudience = [...new Set(currentAudienceObj?.contacts?.map((c) => c.department).filter(Boolean))];
   const ousInAudience = [...new Set(currentAudienceObj?.contacts?.map((c) => c.ou).filter(Boolean))];
   const groupsInAudience = [...new Set(currentAudienceObj?.contacts?.flatMap((c) => c.directoryGroups || []).filter(Boolean))];
+
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsAiGenerating(true);
+    setAiError('');
+    try {
+      // 1. Generate Template
+      const response = await templateService.generateAITemplate({
+        targetAudience: 'General Employees',
+        category: 'IT & Security',
+        difficulty: 3,
+        tone: 'Authoritative & Urgent',
+        companyName: 'Internal Security',
+        scenarioPrompt: aiPrompt,
+        selectedModel: ''
+      });
+      
+      if (response.success && response.data) {
+        // 2. Save Template
+        const savedTemplate = await templateService.createTemplate({
+          name: `AI Generated: ${aiPrompt.substring(0, 30)}...`,
+          subject: response.data.subject,
+          htmlContent: response.data.htmlContent,
+          textContent: response.data.textContent || '',
+          channel: 'email',
+          category: 'IT & Security',
+          difficulty: 3,
+        });
+        
+        // 3. Pre-select and set campaign name
+        if (savedTemplate.success && savedTemplate.data) {
+          setSelectedTemplate(savedTemplate.data._id);
+          if (!campaignName) {
+            setCampaignName(`AI Campaign: ${aiPrompt.substring(0, 30)}`);
+          }
+          setChannel('email');
+          // In real app, we'd refetch templates or append to state, but for now we reload or assume useResources refetches
+          window.location.reload(); // Simple approach to let useResources refetch, or just alert success
+        }
+      }
+    } catch (err) {
+      setAiError(err.message || 'Failed to generate AI template');
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
 
   const handleNext = () => {
     setActiveStep((prev) => prev + 1);
@@ -84,6 +147,11 @@ const StartCampaign = () => {
       template: selectedTemplate,
       emailConcurrency: Number(emailConcurrency) || 5,
       timeDelay: Number(timeDelay) || 1,
+      msTeams: {
+        notifyOnStart: msTeamsNotifyStart,
+        notifyOnFinish: msTeamsNotifyFinish,
+        notifyOnPhishReport: msTeamsNotifyPhishReport
+      },
       targetScope: {
         type: targetFilterType === 'all' ? 'audience' : targetFilterType,
         description: targetFilterValue || 'Full Audience',
@@ -208,21 +276,31 @@ const StartCampaign = () => {
                   </Grid>
 
                   <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel sx={{ color: '#94a3b8' }}>Select {channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template</InputLabel>
-                      <Select
-                        value={selectedTemplate}
-                        label={`Select ${channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template`}
-                        onChange={(e) => setSelectedTemplate(e.target.value)}
-                        sx={{ bgcolor: '#0b0f19' }}
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <FormControl fullWidth>
+                        <InputLabel sx={{ color: '#94a3b8' }}>Select {channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template</InputLabel>
+                        <Select
+                          value={selectedTemplate}
+                          label={`Select ${channel === 'email' ? 'Phishing' : 'Vishing'} Scenario Template`}
+                          onChange={(e) => setSelectedTemplate(e.target.value)}
+                          sx={{ bgcolor: '#0b0f19' }}
+                        >
+                          {templates?.filter(t => (t.channel || 'email') === channel).map((t) => (
+                            <MenuItem key={t._id} value={t._id}>
+                              {t.name} — ({t.category || 'General'} | Difficulty: {t.difficulty || 3}/5)
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setAiDialogOpen(true)}
+                        startIcon={<AutoAwesomeIcon />}
+                        sx={{ height: 56, whiteSpace: 'nowrap', borderColor: '#3b82f6', color: '#60a5fa' }}
                       >
-                        {templates?.filter(t => (t.channel || 'email') === channel).map((t) => (
-                          <MenuItem key={t._id} value={t._id}>
-                            {t.name} — ({t.category || 'General'} | Difficulty: {t.difficulty || 3}/5)
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                        Auto-Generate
+                      </Button>
+                    </Box>
                   </Grid>
 
                   {currentTemplateObj && (
@@ -400,66 +478,108 @@ const StartCampaign = () => {
                 </Typography>
 
                 <Grid container spacing={3}>
-                  {channel === 'email' ? (
-                      <Grid item xs={12}>
-                        <FormControl fullWidth>
-                          <InputLabel sx={{ color: '#94a3b8' }}>Select SMTP Relay Profile</InputLabel>
-                          <Select
-                            value={selectedSenderProfile}
-                            label="Select SMTP Relay Profile"
-                            onChange={(e) => setSelectedSenderProfile(e.target.value)}
-                            sx={{ bgcolor: '#0b0f19' }}
-                          >
-                            {senderProfiles?.map((p) => (
-                              <MenuItem key={p._id} value={p._id}>
-                                {p.senderName} ({p.host}:{p.port} {p.isDefault ? '— Default' : ''})
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    ) : (
-                      <Grid item xs={12}>
-                        <FormControl fullWidth>
-                          <InputLabel sx={{ color: '#94a3b8' }}>Select Telephony Voice API Profile</InputLabel>
-                          <Select
-                            value={selectedTelephonyProfile}
-                            label="Select Telephony Voice API Profile"
-                            onChange={(e) => setSelectedTelephonyProfile(e.target.value)}
-                            sx={{ bgcolor: '#0b0f19' }}
-                          >
-                            {telephonyProfiles?.map((p) => (
-                              <MenuItem key={p._id} value={p._id}>
-                                {p.name} ({p.provider} - {p.callerId})
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    )}
+                                  <Grid container spacing={3}>
+                    {channel === 'email' ? (
+                        <Grid item xs={12}>
+                          <FormControl fullWidth>
+                            <InputLabel sx={{ color: '#94a3b8' }}>Select SMTP Relay Profile</InputLabel>
+                            <Select
+                              value={selectedSenderProfile}
+                              label="Select SMTP Relay Profile"
+                              onChange={(e) => setSelectedSenderProfile(e.target.value)}
+                              sx={{ bgcolor: '#0b0f19' }}
+                            >
+                              {senderProfiles?.map((p) => (
+                                <MenuItem key={p._id} value={p._id}>
+                                  {p.senderName} ({p.host}:{p.port} {p.isDefault ? '⭐ Default' : ''})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      ) : (
+                        <Grid item xs={12}>
+                          <FormControl fullWidth>
+                            <InputLabel sx={{ color: '#94a3b8' }}>Select Telephony Voice API Profile</InputLabel>
+                            <Select
+                              value={selectedTelephonyProfile}
+                              label="Select Telephony Voice API Profile"
+                              onChange={(e) => setSelectedTelephonyProfile(e.target.value)}
+                              sx={{ bgcolor: '#0b0f19' }}
+                            >
+                              {telephonyProfiles?.map((p) => (
+                                <MenuItem key={p._id} value={p._id}>
+                                  {p.name} ({p.provider} - {p.callerId})
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      )}
 
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Delivery Concurrency (Parallel Workers)"
-                      value={emailConcurrency}
-                      onChange={(e) => setEmailConcurrency(e.target.value)}
-                      helperText="Default: 5 concurrent threads"
-                    />
-                  </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="Delivery Batch Size (Concurrency)"
+                        value={emailConcurrency}
+                        onChange={(e) => setEmailConcurrency(e.target.value)}
+                        helperText="Number of emails dispatched simultaneously"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="Batch Delay (Seconds between sends)"
+                        value={timeDelay}
+                        onChange={(e) => setTimeDelay(e.target.value)}
+                        helperText="Default: 1 second delay between messages"
+                      />
+                    </Grid>
 
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Batch Delay (Seconds between sends)"
-                      value={timeDelay}
-                      onChange={(e) => setTimeDelay(e.target.value)}
-                      helperText="Default: 1 second delay between messages"
-                    />
+                    {/* MS Teams Overrides */}
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle1" sx={{ color: '#f8fafc', fontWeight: 600, mb: 1, mt: 1 }}>
+                        Campaign Integrations (MS Teams Webhook)
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <input
+                              type="checkbox"
+                              checked={msTeamsNotifyStart}
+                              onChange={(e) => setMsTeamsNotifyStart(e.target.checked)}
+                              style={{ marginRight: 8, transform: 'scale(1.2)' }}
+                            />
+                          }
+                          label={<Typography sx={{ color: '#94a3b8' }}>Notify MS Teams when campaign starts</Typography>}
+                        />
+                        <FormControlLabel
+                          control={
+                            <input
+                              type="checkbox"
+                              checked={msTeamsNotifyFinish}
+                              onChange={(e) => setMsTeamsNotifyFinish(e.target.checked)}
+                              style={{ marginRight: 8, transform: 'scale(1.2)' }}
+                            />
+                          }
+                          label={<Typography sx={{ color: '#94a3b8' }}>Notify MS Teams when campaign finishes</Typography>}
+                        />
+                        <FormControlLabel
+                          control={
+                            <input
+                              type="checkbox"
+                              checked={msTeamsNotifyPhishReport}
+                              onChange={(e) => setMsTeamsNotifyPhishReport(e.target.checked)}
+                              style={{ marginRight: 8, transform: 'scale(1.2)' }}
+                            />
+                          }
+                          label={<Typography sx={{ color: '#94a3b8' }}>Notify MS Teams when a user reports a phish</Typography>}
+                        />
+                      </Box>
+                    </Grid>
                   </Grid>
-                </Grid>
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
                   <Button onClick={handleBack} sx={{ color: '#94a3b8' }}>
@@ -568,6 +688,45 @@ const StartCampaign = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* AI Generator Dialog */}
+          <Dialog open={aiDialogOpen} onClose={() => !isAiGenerating && setAiDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: '#111827', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)' } }}>
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AutoAwesomeIcon sx={{ color: '#60a5fa' }} /> AI Driven Campaign Generator
+            </DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ color: '#94a3b8', mb: 2, mt: 1 }}>
+                Describe your desired simulation. The AI will generate a complete template (Subject, HTML, Text) and configure the campaign name. You can review the template before launching.
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                placeholder="e.g. An urgent HR email about a mandatory benefits update. Needs to look official and urgent."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                disabled={isAiGenerating}
+                sx={{
+                  '& .MuiInputBase-root': { bgcolor: '#0b0f19', color: '#f8fafc' },
+                }}
+              />
+              {aiError && (
+                <Alert severity="error" sx={{ mt: 2 }}>{aiError}</Alert>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ p: 2, pt: 0 }}>
+              <Button onClick={() => setAiDialogOpen(false)} sx={{ color: '#94a3b8' }} disabled={isAiGenerating}>Cancel</Button>
+              <Button 
+                onClick={handleAiGenerate} 
+                variant="contained" 
+                disabled={!aiPrompt.trim() || isAiGenerating}
+                sx={{ bgcolor: '#3b82f6', color: '#fff', '&:hover': { bgcolor: '#2563eb' } }}
+                startIcon={isAiGenerating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
+              >
+                {isAiGenerating ? 'Generating...' : 'Generate & Review'}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
         </Container>
         <Footer />

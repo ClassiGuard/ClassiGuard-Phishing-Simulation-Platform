@@ -581,6 +581,9 @@ const Settings = () => {
               <Tabs
                 value={tabIndex}
                 onChange={(e, val) => setTabIndex(val)}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
                 sx={{
                   '& .MuiTab-root': {
                     color: '#94a3b8',

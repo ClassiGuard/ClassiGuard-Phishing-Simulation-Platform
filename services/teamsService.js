@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 import { getSystemSettings } from './systemSettingService.js';
 
 export async function sendTeamsMessage(payload) {
@@ -26,8 +26,12 @@ export async function sendTeamsCampaignAlert(campaign, action = 'started') {
     const settings = await getSystemSettings();
     if (!settings || !settings.msTeams || !settings.msTeams.enabled) return;
 
-    if (action === 'started' && !settings.msTeams.notifyOnCampaignStart) return;
-    if (action === 'finished' && !settings.msTeams.notifyOnCampaignFinish) return;
+    // Check if the campaign has overrides, else fallback to global settings
+    const notifyStart = campaign.msTeams && 'notifyOnStart' in campaign.msTeams ? campaign.msTeams.notifyOnStart : settings.msTeams.notifyOnCampaignStart;
+    const notifyFinish = campaign.msTeams && 'notifyOnFinish' in campaign.msTeams ? campaign.msTeams.notifyOnFinish : settings.msTeams.notifyOnCampaignFinish;
+
+    if (action === 'started' && !notifyStart) return;
+    if (action === 'finished' && !notifyFinish) return;
 
     const color = action === 'started' ? '0078D7' : '107C10';
     const statusText = action === 'started' ? 'Started' : 'Completed';
@@ -57,7 +61,10 @@ export async function sendTeamsCampaignAlert(campaign, action = 'started') {
 export async function sendTeamsPhishingReportedAlert(contact, campaign) {
   try {
     const settings = await getSystemSettings();
-    if (!settings || !settings.msTeams || !settings.msTeams.enabled || !settings.msTeams.notifyOnPhishingReported) return;
+    if (!settings || !settings.msTeams || !settings.msTeams.enabled) return;
+
+    const notifyPhish = campaign && campaign.msTeams && 'notifyOnPhishReport' in campaign.msTeams ? campaign.msTeams.notifyOnPhishReport : settings.msTeams.notifyOnPhishingReported;
+    if (!notifyPhish) return;
 
     const payload = {
       "@type": "MessageCard",

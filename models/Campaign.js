@@ -50,6 +50,11 @@ const campaignSchema = new Schema({
         type: Boolean,
         default: false,
     },
+    msTeams: {
+        notifyOnStart: { type: Boolean, default: false },
+        notifyOnFinish: { type: Boolean, default: false },
+        notifyOnPhishReport: { type: Boolean, default: false }
+    },
     purpose: { type: String, required: true, trim: true, maxlength: 2000 },
     targetScope: {
         type: { type: String, enum: ['audience', 'person', 'group', 'ou', 'domain'], required: true },

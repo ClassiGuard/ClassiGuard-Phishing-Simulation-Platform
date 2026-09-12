@@ -85,7 +85,7 @@ export const getCampaignById = async (req, res) => {
 // Prepare a new campaign
 export const prepareCampaign = async (req, res) => {
     try {
-        const { name, audience, channel = 'email', senderProfile, telephonyProfile, template, emailConcurrency, timeDelay, purpose, targetScope, allowedDomains = [], blockedDomains = [], exclusionGroups = [], scheduledStart, scheduledEnd } = req.body;
+        const { name, audience, channel = 'email', senderProfile, telephonyProfile, template, emailConcurrency, timeDelay, purpose, targetScope, allowedDomains = [], blockedDomains = [], exclusionGroups = [], scheduledStart, scheduledEnd, msTeams } = req.body;
         if (!purpose || !targetScope?.type) return res.status(400).json({ success: false, message: 'A written purpose and target scope are required.' });
         if (scheduledStart && scheduledEnd && new Date(scheduledStart) >= new Date(scheduledEnd)) return res.status(400).json({ success: false, message: 'The campaign end time must be after the start time.' });
 
@@ -116,6 +116,7 @@ export const prepareCampaign = async (req, res) => {
             exclusionGroups,
             scheduledStart: scheduledStart || null,
             scheduledEnd: scheduledEnd || null,
+            msTeams: msTeams || { notifyOnStart: false, notifyOnFinish: false, notifyOnPhishReport: false },
             requestedBy: req.user._id,
             status: 'pending_approval',
             AIEnabled: template == "ai-generated" // Set AIEnabled dynamically
