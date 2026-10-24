@@ -50,3 +50,6 @@ client/.env.local
 # Ignore any dependencies installed using yarn
 yarn.lock
 *.pptx
+
+# Internal / Sensitive documentation
+subdoc/
